@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Party Ledger</title>
+
+<style>
+body { font-family: Arial; background:#f5f5f5; padding:20px; }
+.card { background:white; padding:20px; margin-bottom:20px; border-radius:10px; }
+input, select { width:100%; padding:10px; margin:5px 0; }
+button { padding:10px; background:#2d4a8a; color:white; border:none; border-radius:5px; cursor:pointer; }
+.delete-btn { background:red; }
+.party-link { color:blue; cursor:pointer; font-weight:bold; }
+.hidden { display:none; }
+table { width:100%; border-collapse: collapse; }
+th, td { border:1px solid #ddd; padding:10px; text-align:center; }
+</style>
+
+</head>
+
+<body>
+
+<h2>Party Ledger</h2>
+
+<!-- ADD PARTY -->
+<div class="card">
+<h3>Add Party</h3>
+<input type="text" id="partyName" placeholder="Party Name">
+<button onclick="addParty()">Add Party</button>
+</div>
+
+<!-- ADD ENTRY -->
+<div class="card">
+<h3>Add Purchase / Payment</h3>
+
+<select id="partySelect"></select>
+<input type="date" id="date">
+<input type="number" id="purchase" placeholder="Purchase Amount">
+<input type="number" id="payment" placeholder="Payment Amount">
+
+<button onclick="addTransaction()">Save Entry</button>
+</div>
+
+<!-- SUMMARY -->
+<div class="card">
+<h3>Transaction Summary</h3>
+<table>
+<thead>
+<tr>
+<th>Party</th>
+<th>Purchase</th>
+<th>Paid</th>
+<th>Pending</th>
+<th>Delete</th>
+</tr>
+</thead>
+<tbody id="summary"></tbody>
+</table>
+</div>
+
+<!-- DETAILS -->
+<div class="card hidden" id="detailsBox">
+<h3 id="detailsTitle"></h3>
+<button onclick="goBack()">⬅ Back</button>
+
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Purchase</th>
+<th>Payment</th>
+<th>Balance</th>
+<th>Delete</th>
+</tr>
+</thead>
+<tbody id="details"></tbody>
+</table>
+</div>
+
+<script>
+
+let parties = [];
+let transactions = [];
+
+// FORMAT NUMBER
+function format(num){
+    return "Rs. " + num.toLocaleString('en-IN');
+}
+
+// ADD PARTY
+function addParty(){
+    let name = document.getElementById("partyName").value.trim();
+    if(!name) return alert("Enter party name");
+
+    if(parties.includes(name)) return alert("Party already exists");
+
+    parties.push(name);
+    updateDropdown();
+    loadSummary();
+
+    document.getElementById("partyName").value="";
+}
+
+// UPDATE DROPDOWN
+function updateDropdown(){
+    let select = document.getElementById("partySelect");
+    select.innerHTML = "";
+
+    parties.forEach(p=>{
+        select.innerHTML += `<option>${p}</option>`;
+    });
+}
+
+// ADD TRANSACTION
+function addTransaction(){
+    let party = document.getElementById("partySelect").value;
+    let date = document.getElementById("date").value;
+    let purchase = Number(document.getElementById("purchase").value) || 0;
+    let payment = Number(document.getElementById("payment").value) || 0;
+
+    if(!party || !date) return alert("Enter all fields");
+
+    transactions.push({party,date,purchase,payment});
+
+    loadSummary();
+    clearInputs();
+}
+
+// CLEAR INPUTS
+function clearInputs(){
+    document.getElementById("purchase").value="";
+    document.getElementById("payment").value="";
+}
+
+// LOAD SUMMARY
+function loadSummary(){
+    let summary = {};
+
+    transactions.forEach(t=>{
+        if(!summary[t.party]) summary[t.party]={p:0, pay:0};
+        summary[t.party].p += t.purchase;
+        summary[t.party].pay += t.payment;
+    });
+
+    let tbody = document.getElementById("summary");
+    tbody.innerHTML="";
+
+    for(let p in summary){
+        let pending = summary[p].p - summary[p].pay;
+
+        tbody.innerHTML += `
+        <tr>
+            <td class="party-link" onclick="showDetails('${p}')">${p}</td>
+            <td>${format(summary[p].p)}</td>
+            <td>${format(summary[p].pay)}</td>
+            <td style="color:${pending>=0?'red':'green'}">
+                ${format(pending)}
+            </td>
+            <td><button class="delete-btn" onclick="deleteParty('${p}')">Delete</button></td>
+        </tr>`;
+    }
+}
+
+// DELETE PARTY
+function deleteParty(party){
+    if(!confirm("Delete party?")) return;
+
+    parties = parties.filter(p=>p!==party);
+    transactions = transactions.filter(t=>t.party!==party);
+
+    updateDropdown();
+    loadSummary();
+}
+
+// SHOW DETAILS
+function showDetails(party){
+    document.getElementById("detailsBox").classList.remove("hidden");
+    document.getElementById("detailsTitle").innerText = party + " Ledger";
+
+    let tbody = document.getElementById("details");
+    tbody.innerHTML="";
+
+    let balance = 0;
+
+    transactions
+    .filter(t=>t.party===party)
+    .sort((a,b)=> new Date(a.date)-new Date(b.date))
+    .forEach((t,index)=>{
+        balance += t.purchase - t.payment;
+
+        tbody.innerHTML += `
+        <tr>
+            <td>${t.date}</td>
+            <td>${format(t.purchase)}</td>
+            <td>${format(t.payment)}</td>
+            <td style="color:${balance>=0?'red':'green'}">
+                ${format(balance)}
+            </td>
+            <td><button class="delete-btn" onclick="deleteEntry(${index},'${party}')">Delete</button></td>
+        </tr>`;
+    });
+}
+
+// DELETE ENTRY
+function deleteEntry(index,party){
+    let filtered = transactions.filter(t=>t.party===party);
+    let item = filtered[index];
+
+    transactions = transactions.filter(t=>t!==item);
+
+    showDetails(party);
+    loadSummary();
+}
+
+// BACK
+function goBack(){
+    document.getElementById("detailsBox").classList.add("hidden");
+}
+
+</script>
+
+</body>
+</html>
