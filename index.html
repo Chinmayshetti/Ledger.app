@@ -78,10 +78,17 @@ th, td { border:1px solid #ddd; padding:10px; text-align:center; }
 
 <script>
 
-let parties = [];
-let transactions = [];
+// 🔥 LOAD FROM LOCAL STORAGE
+let parties = JSON.parse(localStorage.getItem("parties")) || [];
+let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
 
-// FORMAT NUMBER
+// SAVE FUNCTION
+function saveData(){
+    localStorage.setItem("parties", JSON.stringify(parties));
+    localStorage.setItem("transactions", JSON.stringify(transactions));
+}
+
+// FORMAT
 function format(num){
     return "Rs. " + num.toLocaleString('en-IN');
 }
@@ -91,9 +98,11 @@ function addParty(){
     let name = document.getElementById("partyName").value.trim();
     if(!name) return alert("Enter party name");
 
-    if(parties.includes(name)) return alert("Party already exists");
+    if(parties.includes(name)) return alert("Party exists");
 
     parties.push(name);
+    saveData();
+
     updateDropdown();
     loadSummary();
 
@@ -120,6 +129,7 @@ function addTransaction(){
     if(!party || !date) return alert("Enter all fields");
 
     transactions.push({party,date,purchase,payment});
+    saveData();
 
     loadSummary();
     clearInputs();
@@ -167,6 +177,7 @@ function deleteParty(party){
     parties = parties.filter(p=>p!==party);
     transactions = transactions.filter(t=>t.party!==party);
 
+    saveData();
     updateDropdown();
     loadSummary();
 }
@@ -207,6 +218,7 @@ function deleteEntry(index,party){
 
     transactions = transactions.filter(t=>t!==item);
 
+    saveData();
     showDetails(party);
     loadSummary();
 }
@@ -215,6 +227,10 @@ function deleteEntry(index,party){
 function goBack(){
     document.getElementById("detailsBox").classList.add("hidden");
 }
+
+// INITIAL LOAD
+updateDropdown();
+loadSummary();
 
 </script>
 
